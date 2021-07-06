@@ -1,7 +1,8 @@
 // {self} here allows us to use simple 'graphics' but not 'terra::graphics' in the future
-use tetra::graphics::{self, Color, Texture};
+use tetra::graphics::{self, Color, Texture, Rectangle};
 use tetra::input::{self, Key};
 use tetra::math::Vec2;
+use tetra::window;
 use tetra::{Context, ContextBuilder, State};
 
 
@@ -10,6 +11,8 @@ const WINDOW_HEIGHT: f32 = 480.0;
 const WINDOW_WIDTH: f32 = 640.0;
 // Paddle movement speed
 const PADDLE_SPEED: f32 = 8.0;
+// Ball movement speed
+const BALL_SPEED: f32 = 10.0;
 
 // Holds info about game entity - paddle, ball or whatever else that has texture and position
 struct Entity {
@@ -40,12 +43,14 @@ order to define your game's behaviour.
 struct GameState {
     player1: Entity,
     player2: Entity,
+    ball: Entity,
 }
 
 
 impl GameState {
       // Constructor for game state
     fn new(ctx: &mut Context) -> tetra::Result<GameState>{
+        // First player
         // Just load the texture without drawing it
         let player1_texture = Texture::new(ctx, "./resources/player1.png")?;
         // Set the player's position
@@ -55,6 +60,7 @@ impl GameState {
         // Create an entity of first player
         let player1 = Entity::new(player1_texture, player1_position);
 
+        // Second player
         let player2_texture = Texture::new(ctx, "./resources/player2.png")?;
         let player2_position = Vec2::new(
             WINDOW_WIDTH - player2_texture.width() as f32 - 16.0,
@@ -62,9 +68,18 @@ impl GameState {
         );
         let player2 = Entity::new(player2_texture, player2_position);
 
+        // Ball
+        let ball_texture = Texture::new(ctx, "./resources/ball.png")?;
+        let ball_position = Vec2::new(
+            WINDOW_WIDTH / 2.0 - ball_texture.width() as f32 / 2.0,
+            WINDOW_HEIGHT / 2.0 - ball_texture.height() as f32 / 2.0,
+        );
+        let ball = Entity::new(ball_texture, ball_position);
+
         Ok(GameState{
             player1,
             player2,
+            ball
         })
     }
 }
@@ -77,6 +92,9 @@ impl State for GameState {
         // Draw both players' paddles
         self.player1.texture.draw(ctx, self.player1.position);
         self.player2.texture.draw(ctx, self.player2.position);
+
+        // Draw the ball
+        self.ball.texture.draw(ctx, self.ball.position);
 
         // It should return Result
         Ok(())
