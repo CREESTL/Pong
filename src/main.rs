@@ -13,6 +13,10 @@ const WINDOW_WIDTH: f32 = 640.0;
 const PADDLE_SPEED: f32 = 8.0;
 // Ball movement speed
 const BALL_SPEED: f32 = 5.0;
+// Ball acceleration with each hit
+const BALL_ACCEL: f32 = 0.05;
+const PADDLE_SPIN: f32 = 4.0;
+
 
 // Holds info about game entity - paddle, ball or whatever else that has texture and position
 struct Entity {
@@ -48,6 +52,14 @@ impl Entity {
             self.position.y,
             self.width(),
             self.height(),
+        )
+    }
+
+    // Gives the center of the object
+    fn centre(&self) -> Vec2<f32>{
+        Vec2::new(
+            self.position.x + (self.width() / 2.0),
+            self.position.y + (self.height() / 2.0),
         )
     }
 }
@@ -151,12 +163,29 @@ impl State for GameState {
         let player1_bounds = self.player1.bounds();
         let player2_bounds = self.player2.bounds();
         let ball_bounds = self.ball.bounds();
-        // And if it does - flip the X component of the velocity
-        if (ball_bounds.intersects(&player1_bounds) || ball_bounds.intersects(&player2_bounds)){
-            self.ball.velocity.x = -self.ball.velocity.x
+
+        let paddle_hit = if ball_bounds.intersects(&player1_bounds){
+            Some(&self.player1)
+        } else if ball_bounds.intersects(&player2_bounds){
+            Some(&self.player2)
+        }  else {
+            None
+        } ;
+        if let Some(paddle) = paddle_hit {
+            // Increase ball's velocity and flip it
+            self.ball.velocity.x = -(self.ball.velocity.x + (BALL_ACCEL * self.ball.velocity.x.signum()));
+
+            // Calculate the offset between the paddle and the ball
+            let offset = (paddle.centre().y - self.ball.centre().y) / paddle.height();
+
+            // Apply the spin ti the ball
+            self.ball.velocity.y += PADDLE_SPIN * -offset;
         }
 
-
+        // Make sure the ball can't move out of the screen
+        if self.ball.position.y <= 0.0 || self.ball.position.y + self.ball.height() >= WINDOW_HEIGHT{
+            self.ball.velocity.y = -self.ball.velocity.y;
+        }
 
         // Update ball's position each time
         self.ball.position += self.ball.velocity;
