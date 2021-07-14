@@ -1,5 +1,6 @@
 // {self} here allows us to use simple 'graphics' but not 'terra::graphics' in the future
 use tetra::graphics::{self, Color, Texture, Rectangle};
+use tetra::graphics::text::{Font, Text};
 use tetra::input::{self, Key};
 use tetra::math::Vec2;
 use tetra::window;
@@ -13,12 +14,25 @@ const WINDOW_WIDTH: f32 = 640.0;
 const PADDLE_SPEED: f32 = 8.0;
 // Ball movement speed
 const BALL_SPEED: f32 = 5.0;
-// Ball acceleration with each hit
-const BALL_ACCEL: f32 = 0.05;
+
 const PADDLE_SPIN: f32 = 4.0;
 
+const PLAYER1_TEXT_OFFSET: Vec2<f32> = Vec2::new(16.0, 16.0);
+const PLAYER2_TEXT_OFFSET: Vec2<f32> = Vec2::new(WINDOW_WIDTH - 92.0, 16.0);
 
-// Holds info about game entity - paddle, ball or whatever else that has texture and position
+// Holds info about player
+struct PlayerScore{
+    score: i32,
+}
+
+impl PlayerScore{
+    fn new(score: i32) -> PlayerScore{
+        PlayerScore{score}
+    }
+
+}
+
+// Holds info about game entity - paddle, ball or any other moving object
 struct Entity {
     texture: Texture,
     position: Vec2<f32>,
@@ -35,6 +49,7 @@ impl Entity {
     fn with_velocity(texture: Texture, position: Vec2<f32>, velocity: Vec2<f32>) -> Entity{
         Entity{texture, position, velocity}
     }
+
 
     // Size of entity
     fn width(&self) -> f32{
@@ -81,6 +96,11 @@ struct GameState {
     player1: Entity,
     player2: Entity,
     ball: Entity,
+    player1_score: PlayerScore,
+    player2_score: PlayerScore,
+    player1_text: Text,
+    player2_text: Text,
+
 }
 
 
@@ -114,10 +134,26 @@ impl GameState {
         let ball_velocity = Vec2::new(-BALL_SPEED, 0.0);
         let ball = Entity::with_velocity(ball_texture, ball_position, ball_velocity);
 
+        // Score
+        let player1_score = PlayerScore::new(0);
+        let player2_score = PlayerScore::new(0);
+
+        // Text
+        let player1_text = Text::new(
+                format!("Score: {}", player1_score.score), Font::bmfont(ctx, "./resources/DejaVuSansMono.fnt")?,
+            );
+        let player2_text = Text::new(
+                format!("Score: {}", player2_score.score), Font::bmfont(ctx, "./resources/DejaVuSansMono.fnt")?,
+            );
+
         Ok(GameState{
             player1,
             player2,
-            ball
+            ball,
+            player1_text,
+            player2_text,
+            player1_score,
+            player2_score,
         })
     }
 }
@@ -133,6 +169,10 @@ impl State for GameState {
 
         // Draw the ball
         self.ball.texture.draw(ctx, self.ball.position);
+
+        // Draw the text
+        self.player1_text.draw(ctx, PLAYER1_TEXT_OFFSET);
+        self.player2_text.draw(ctx, PLAYER2_TEXT_OFFSET);
 
         // It should return Result
         Ok(())
@@ -173,8 +213,8 @@ impl State for GameState {
         } ;
 
         if let Some(paddle) = paddle_hit {
-            // Increase ball's velocity and flip it
-            self.ball.velocity.x = -(self.ball.velocity.x + (BALL_ACCEL * self.ball.velocity.x.signum()));
+            // Flip ball's direction
+            self.ball.velocity.x = -self.ball.velocity.x;
 
             // Calculate the offset between the paddle and the ball
             let offset = (paddle.centre().y - self.ball.centre().y) / paddle.height();
@@ -191,13 +231,28 @@ impl State for GameState {
         // TODO make a gook looking text and menu here!
         // Pick a winner
         if self.ball.position.x < 0.0 {
-            window::quit(ctx);
-            println!("Player 2 wins!");
+            self.player2_score.score += 1;
+            self.player2_text = Text::new(
+                    format!("Score: {}", self.player2_score.score), Font::bmfont(ctx, "./resources/DejaVuSansMono.fnt")?,
+                );
+            // Reset the ball to the middle of the screen
+            self.ball.position = Vec2::new(
+                WINDOW_WIDTH / 2.0 - self.ball.width() as f32 / 2.0,
+                WINDOW_HEIGHT / 2.0 - self.ball.height() as f32 / 2.0,
+            );
         }
 
         if self.ball.position.x > WINDOW_WIDTH {
-            window::quit(ctx);
-            println!("Player 1 wins!");
+            self.player1_score.score += 1;
+            self.player1_text = Text::new(
+                    format!("Score: {}", self.player1_score.score), Font::bmfont(ctx, "./resources/DejaVuSansMono.fnt")?,
+                );
+             // Reset the ball to the middle of the screen
+            self.ball.position = Vec2::new(
+                WINDOW_WIDTH / 2.0 - self.ball.width() as f32 / 2.0,
+                WINDOW_HEIGHT / 2.0 - self.ball.height() as f32 / 2.0,
+            );
+
         }
 
         // Update ball's position each time
