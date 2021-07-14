@@ -171,6 +171,7 @@ impl State for GameState {
         }  else {
             None
         } ;
+
         if let Some(paddle) = paddle_hit {
             // Increase ball's velocity and flip it
             self.ball.velocity.x = -(self.ball.velocity.x + (BALL_ACCEL * self.ball.velocity.x.signum()));
@@ -185,6 +186,18 @@ impl State for GameState {
         // Make sure the ball can't move out of the screen
         if self.ball.position.y <= 0.0 || self.ball.position.y + self.ball.height() >= WINDOW_HEIGHT{
             self.ball.velocity.y = -self.ball.velocity.y;
+        }
+
+        // TODO make a gook looking text and menu here!
+        // Pick a winner
+        if self.ball.position.x < 0.0 {
+            window::quit(ctx);
+            println!("Player 2 wins!");
+        }
+
+        if self.ball.position.x > WINDOW_WIDTH {
+            window::quit(ctx);
+            println!("Player 1 wins!");
         }
 
         // Update ball's position each time
