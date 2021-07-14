@@ -12,18 +12,43 @@ const WINDOW_WIDTH: f32 = 640.0;
 // Paddle movement speed
 const PADDLE_SPEED: f32 = 8.0;
 // Ball movement speed
-const BALL_SPEED: f32 = 10.0;
+const BALL_SPEED: f32 = 5.0;
 
 // Holds info about game entity - paddle, ball or whatever else that has texture and position
 struct Entity {
     texture: Texture,
     position: Vec2<f32>,
+    velocity: Vec2<f32>,
 }
 
 impl Entity {
-    // Constructor of a new game entity
+    // Constructor of a new player entity
     fn new(texture: Texture, position: Vec2<f32>) -> Entity{
-        Entity {texture, position}
+        Entity::with_velocity(texture, position, Vec2::zero())
+    }
+
+    // Constructor of a new ball entity
+    fn with_velocity(texture: Texture, position: Vec2<f32>, velocity: Vec2<f32>) -> Entity{
+        Entity{texture, position, velocity}
+    }
+
+    // Size of entity
+    fn width(&self) -> f32{
+        self.texture.width() as f32
+    }
+
+    fn height(&self) -> f32{
+        self.texture.height() as f32
+    }
+
+    // Rectangle bounds of an entity
+    fn bounds(&self) -> Rectangle{
+        Rectangle::new(
+            self.position.x,
+            self.position.y,
+            self.width(),
+            self.height(),
+        )
     }
 }
 
@@ -74,7 +99,8 @@ impl GameState {
             WINDOW_WIDTH / 2.0 - ball_texture.width() as f32 / 2.0,
             WINDOW_HEIGHT / 2.0 - ball_texture.height() as f32 / 2.0,
         );
-        let ball = Entity::new(ball_texture, ball_position);
+        let ball_velocity = Vec2::new(-BALL_SPEED, 0.0);
+        let ball = Entity::with_velocity(ball_texture, ball_position, ball_velocity);
 
         Ok(GameState{
             player1,
@@ -121,6 +147,19 @@ impl State for GameState {
             self.player2.position.y += PADDLE_SPEED;
         }
 
+        // Check if ball intersects with any paddle
+        let player1_bounds = self.player1.bounds();
+        let player2_bounds = self.player2.bounds();
+        let ball_bounds = self.ball.bounds();
+        // And if it does - flip the X component of the velocity
+        if (ball_bounds.intersects(&player1_bounds) || ball_bounds.intersects(&player2_bounds)){
+            self.ball.velocity.x = -self.ball.velocity.x
+        }
+
+
+
+        // Update ball's position each time
+        self.ball.position += self.ball.velocity;
         Ok(())
     }
 }
