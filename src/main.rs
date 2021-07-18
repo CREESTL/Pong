@@ -5,6 +5,7 @@ use tetra::input::{self, Key};
 use tetra::math::Vec2;
 use tetra::window;
 use tetra::{Context, ContextBuilder, State};
+use rand::Rng;
 
 
 // Size of the window
@@ -19,6 +20,8 @@ const PADDLE_SPIN: f32 = 4.0;
 
 const PLAYER1_TEXT_OFFSET: Vec2<f32> = Vec2::new(16.0, 16.0);
 const PLAYER2_TEXT_OFFSET: Vec2<f32> = Vec2::new(WINDOW_WIDTH - 92.0, 16.0);
+
+const MAX_POINTS: i32 = 10;
 
 // Holds info about player
 struct PlayerScore{
@@ -105,7 +108,7 @@ struct GameState {
 
 
 impl GameState {
-      // Constructor for game state
+    // Constructor for game state
     fn new(ctx: &mut Context) -> tetra::Result<GameState>{
         // First player
         // Just load the texture without drawing it
@@ -131,7 +134,7 @@ impl GameState {
             WINDOW_WIDTH / 2.0 - ball_texture.width() as f32 / 2.0,
             WINDOW_HEIGHT / 2.0 - ball_texture.height() as f32 / 2.0,
         );
-        let ball_velocity = Vec2::new(-BALL_SPEED, 0.0);
+        let ball_velocity = GameState::set_ball_velocity();
         let ball = Entity::with_velocity(ball_texture, ball_position, ball_velocity);
 
         // Score
@@ -155,6 +158,18 @@ impl GameState {
             player1_score,
             player2_score,
         })
+    }
+
+    // Sets random direction of ball movement
+    fn set_ball_velocity() -> Vec2<f32> {
+        let first_hit_player = rand::thread_rng().gen_range(0..2);
+        let mut ball_velocity = Vec2::new(0.0, 0.0);
+        if first_hit_player == 0 {
+            ball_velocity = Vec2::new(BALL_SPEED, 0.0);
+        } else if first_hit_player == 1 {
+            ball_velocity = Vec2::new(-BALL_SPEED, 0.0);
+        }
+        ball_velocity 
     }
 }
 
@@ -228,7 +243,6 @@ impl State for GameState {
             self.ball.velocity.y = -self.ball.velocity.y;
         }
 
-        // TODO make a gook looking text and menu here!
         // Pick a winner
         if self.ball.position.x < 0.0 {
             self.player2_score.score += 1;
@@ -240,6 +254,13 @@ impl State for GameState {
                 WINDOW_WIDTH / 2.0 - self.ball.width() as f32 / 2.0,
                 WINDOW_HEIGHT / 2.0 - self.ball.height() as f32 / 2.0,
             );
+            // Random player makes the first hit
+            let first_hit_player = rand::thread_rng().gen_range(0..2);
+            if first_hit_player == 0 {
+                self.ball.velocity = Vec2::new(BALL_SPEED, 0.0);
+            } else if first_hit_player == 1 {
+                self.ball.velocity = Vec2::new(-BALL_SPEED, 0.0);
+            }
         }
 
         if self.ball.position.x > WINDOW_WIDTH {
@@ -247,12 +268,30 @@ impl State for GameState {
             self.player1_text = Text::new(
                     format!("Score: {}", self.player1_score.score), Font::bmfont(ctx, "./resources/DejaVuSansMono.fnt")?,
                 );
-             // Reset the ball to the middle of the screen
+            // Reset the ball to the middle of the screen
             self.ball.position = Vec2::new(
                 WINDOW_WIDTH / 2.0 - self.ball.width() as f32 / 2.0,
                 WINDOW_HEIGHT / 2.0 - self.ball.height() as f32 / 2.0,
             );
 
+            // Random player makes the first hit
+            let first_hit_player = rand::thread_rng().gen_range(0..2);
+            if first_hit_player == 0 {
+                self.ball.velocity = Vec2::new(BALL_SPEED, 0.0);
+            } else if first_hit_player == 1 {
+                self.ball.velocity = Vec2::new(-BALL_SPEED, 0.0);
+            }
+
+        }
+
+
+        // If one player gets max points - the game is over
+        if self.player1_score.score == MAX_POINTS {
+            window::quit(ctx);
+            println!("PLAYER 1 WINS!");
+        } else if self.player2_score.score == MAX_POINTS {
+            window::quit(ctx);
+            println!("PLAYER 2 WINS!");
         }
 
         // Update ball's position each time
@@ -272,3 +311,14 @@ fn main() -> tetra::Result{
         .run(|ctx| GameState::new(ctx))
 
 }
+
+
+
+/*
+
+TODO
+
+-Make a good menu after one player winning 
+-Make a random player to do the first hit. THe ball should not mantain it's speed after resetting to the center of the screen (DONE)
+-Make the random angle of the first hit
+*/
